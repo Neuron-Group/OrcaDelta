@@ -214,7 +214,7 @@ namespace SPARSE{
 
         this->deepth = b.deepth;
 
-        return *(this);
+        return b;
     }
 
     template<class T>
@@ -421,7 +421,7 @@ namespace SPARSE{
             q_ptr_b.pop();
         }
 
-        return *(this);
+        return b;
     }
 
     template<class T, size_t unit_size>
