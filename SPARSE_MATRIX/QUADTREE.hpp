@@ -122,7 +122,7 @@ namespace SPARSE{
         TREENODE(const TREENODE &b);
         ~TREENODE() {
             if (this->dataNode == nullptr) return;
-            delete[] this->dataNode;
+            delete this->dataNode;
         }
 
         void insert(TREENODE<T> * & root, size_t deepth, T DATA, size_t i, size_t j){
@@ -299,7 +299,24 @@ namespace SPARSE{
     class MAT {
         size_t rows, cols;
 
+        long double prec;
+        bool remove_zero_automatically;
+
         TREENODE<Eigen::Matrix<T, unit_size, unit_size>> * ROOT;
+
+        bool iszero(Eigen::Matrix<T, unit_size, unit_size> & mat) {
+            for (size_t i = 0; i < unit_size; i++) {
+                for (size_t j = 0; j < unit_size; j++) {
+                    if(static_cast<long double>(abs(mat(i, j))) > prec) return false;
+                }
+            }
+            return true;
+        }
+
+        bool iszero(T x) {
+            if(static_cast<long double>(abs(x)) > prec) return false;
+            return true;
+        }
 
         size_t quadtree_size() {
             return (std::max(this->rows, this->cols) + unit_size - 1)/unit_size;
@@ -351,19 +368,72 @@ namespace SPARSE{
             }
         }
 
+        short removezero(TREENODE<Eigen::Matrix<T, unit_size, unit_size>> * & root) {
+            if (root == nullptr) {
+                return 0;
+            }
+
+            if (root->deepth == 0) {
+                if (root->dataNode == nullptr) {
+                    delete root;
+                    return 0;
+                } else {
+                    if (iszero(*(root->dataNode))) {
+                        delete root;
+                        return 0;
+                    } else {
+                        return 1;
+                    }
+                }
+            }
+
+            short flag = 0;
+
+            for (short i = 0; i < 4; i++) {
+                flag += removezero(root->CHILD[i]);
+            }
+
+            if (flag == 0) {
+                delete root;
+                return 0;
+            } else {
+                return 1;
+            }
+        }
+
         public:
-        MAT(size_t rows = 1, size_t cols = 1);
+        MAT(size_t rows = 1, size_t cols = 1, bool remove_zero_automatically = true, long double prec = 1e-8);
         MAT<T, unit_size> & operator = (const MAT<T, unit_size> &b);
         MAT(const MAT &b);
         ~MAT();
+
+        void removeZero();
 
         bool isBlank () const {
             return (this->ROOT == nullptr) ? true : false;
         }
 
+        // 打印精度
+        long double getPrec() const {
+            return this->prec;
+        }
+
+        // 设置精度
+        void setPrec(const long double prec) {this->prec = prec;}
+
+        // 是否自动稀疏化
+        bool isRemoveZeroAutomatically() const {
+            return this->remove_zero_automatically;
+        }
+
+        // 设置自动稀疏化
+        void setRemoveZeroAutomatically(const bool remove_zero_automatically) {
+            this->remove_zero_automatically = remove_zero_automatically;
+        }
+
         bool insert(T data, size_t i, size_t j){
             check_idx_with_error(i, j);
-            if (data == static_cast<T>(0)) return true;
+            if (this->iszero(data)) return true;
             if (check_idx(i, j) != true) return false;
             size_t I = IDX(i);
             size_t J = IDX(j);
@@ -407,6 +477,14 @@ namespace SPARSE{
             ROOT->test_print(ROOT);
         }
 
+        // 维度输出
+        MAT<long long int, unit_size> size() const {
+            MAT<long long int, unit_size> ans(2, 1);
+            ans.insert(this->rows, 0, 0);
+            ans.insert(this->cols, 1, 0);
+            return ans;
+        }
+
         // 置零
         void setZero_();
         MAT<T, unit_size> setZero() const;
@@ -425,10 +503,12 @@ namespace SPARSE{
     };
 
     template<class T, size_t unit_size>
-    MAT<T, unit_size>::MAT(size_t rows, size_t cols) {
+    MAT<T, unit_size>::MAT(size_t rows, size_t cols, bool remove_zero_automatically, long double prec) {
         this->rows = rows;
         this->cols = cols;
         this->ROOT = nullptr;
+        this->remove_zero_automatically = remove_zero_automatically;
+        this->prec = prec;
     }
 
     template<class T, size_t unit_size>
@@ -458,6 +538,10 @@ namespace SPARSE{
 
         this->cols = b.cols;
         this->rows = b.rows;
+
+        this->remove_zero_automatically = b.remove_zero_automatically;
+        this->prec = b.prec;
+
         if (b.isBlank()) {
             del(this->ROOT);
             return *(this);
@@ -504,14 +588,17 @@ namespace SPARSE{
         this->rows = b.rows;
         this->cols = b.cols;
         this->ROOT = nullptr;
+
+        this->remove_zero_automatically = b.remove_zero_automatically;
+        this->prec = b.prec;
+
         if (b.isBlank()) {
             del(this->ROOT);
             return;
         }
-        if (this->isBlank()) {
-            this->ROOT = new TREENODE<Eigen::Matrix<T, unit_size, unit_size>>(b.ROOT->deepth);
-            *(this->ROOT) = *(b.ROOT);
-        }
+
+        this->ROOT = new TREENODE<Eigen::Matrix<T, unit_size, unit_size>>(b.ROOT->deepth);
+        *(this->ROOT) = *(b.ROOT);
 
         std::queue<TREENODE<Eigen::Matrix<T, unit_size, unit_size>> *> q_ptr_this;
         std::queue<TREENODE<Eigen::Matrix<T, unit_size, unit_size>> *> q_ptr_b;
@@ -527,11 +614,7 @@ namespace SPARSE{
                     del(ptr_this->CHILD[i]);
                     ptr_this->CHILD[i] = nullptr;
                 } else {
-                    if (ptr_this->CHILD[i] == nullptr) {
-                        ptr_this->CHILD[i] = new TREENODE<Eigen::Matrix<T, unit_size, unit_size>>(*(ptr_b->CHILD[i]));
-                    } else {
-                        *(ptr_this->CHILD[i]) = *(ptr_b->CHILD[i]);
-                    }
+                    ptr_this->CHILD[i] = new TREENODE<Eigen::Matrix<T, unit_size, unit_size>>(*(ptr_b->CHILD[i]));
 
                     q_ptr_this.push(ptr_this->CHILD[i]);
                     q_ptr_b.push(ptr_b->CHILD[i]);
@@ -541,6 +624,12 @@ namespace SPARSE{
             q_ptr_this.pop();
             q_ptr_b.pop();
         }
+    }
+
+    template<class T, size_t unit_size> 
+    void MAT<T, unit_size>::removeZero() {
+        if (isBlank()) return;
+        removezero(this->ROOT);
     }
 
     template<class T, size_t unit_size>
@@ -636,6 +725,7 @@ namespace SPARSE{
             q_ptr_b.pop();
         }
 
+        if (this->remove_zero_automatically) this->removeZero();
     }
 
     template<class T, size_t unit_size>
@@ -686,6 +776,8 @@ namespace SPARSE{
             q_ptr_this.pop();
             q_ptr_b.pop();
         }
+
+        if (this->remove_zero_automatically) this->removeZero();
 
     }
 
