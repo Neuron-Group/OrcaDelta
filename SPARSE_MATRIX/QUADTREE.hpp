@@ -92,6 +92,8 @@ namespace SPARSE{
         ```
     */
 
+    // 下标溢出异常
+    // 自定义异常类继承自 std::runtime_error
     class IndexOutOfRangeException : public std::runtime_error {
         public:
         explicit IndexOutOfRangeException(const std::string& message)
@@ -116,7 +118,7 @@ namespace SPARSE{
         friend class MAT;
 
         TREENODE(size_t deepth = 0);
-        const TREENODE<T> & operator = (const TREENODE<T> &b);
+        TREENODE<T> & operator = (const TREENODE<T> &b);
         TREENODE(const TREENODE &b);
         ~TREENODE() {
             if (this->dataNode == nullptr) return;
@@ -186,6 +188,15 @@ namespace SPARSE{
                 test_print(root->CHILD[i], i, level+1);
             } 
         }
+
+        void add_(const TREENODE<T> &b);
+        TREENODE<T> operator + (const TREENODE<T> &b) const;
+
+        void sub_(const TREENODE<T> &b);
+        TREENODE<T> operator - (const TREENODE<T> &b) const;
+
+        void neg_();
+        TREENODE<T> operator - () const;
     };
 
     template <class T>
@@ -199,7 +210,9 @@ namespace SPARSE{
     }
 
     template<class T>
-    const TREENODE<T> & TREENODE<T>::operator = (const TREENODE<T> &b) {
+    TREENODE<T> & TREENODE<T>::operator = (const TREENODE<T> &b) {
+
+        if (this == &b) return *this;
 
         if (b.dataNode == nullptr) {
             delete this->dataNode;
@@ -214,7 +227,7 @@ namespace SPARSE{
 
         this->deepth = b.deepth;
 
-        return b;
+        return *this;
     }
 
     template<class T>
@@ -232,6 +245,53 @@ namespace SPARSE{
         } else {
             this->dataNode = new T(*(b.dataNode));
         }
+    }
+
+    template<class T>
+    void TREENODE<T>::add_(const TREENODE<T> & b) {
+        if (b.dataNode == nullptr) return;
+        if (this->dataNode == nullptr) {
+            this->dataNode = new T(*(b.dataNode));
+            return;
+        }
+        *(this->dataNode) = *(this->dataNode) + *(b.dataNode);
+    }
+
+    template<class T>
+    TREENODE<T> TREENODE<T>::operator + (const TREENODE<T> & b) const {
+        TREENODE<T> ans = *this;
+        ans.add_(b);
+        return ans;
+    }
+
+    template<class T>
+    void TREENODE<T>::sub_(const TREENODE<T> & b) {
+        if (b.dataNode == nullptr) return;
+        if (this->dataNode == nullptr) {
+            this->dataNode = new T(-*(b.dataNode));
+            return;
+        }
+        *(this->dataNode) = *(this->dataNode) - *(b.dataNode);
+    }
+
+    template<class T>
+    TREENODE<T> TREENODE<T>::operator - (const TREENODE<T> & b) const {
+        TREENODE<T> ans = *this;
+        ans.add_(b);
+        return ans;
+    }
+
+    template<class T>
+    void TREENODE<T>::neg_() {
+        if (this->dataNode == nullptr) return;
+        *(this->dataNode) = -*(this->dataNode);
+    }
+
+    template<class T>
+    TREENODE<T> TREENODE<T>::operator - () const {
+        TREENODE<T> ans = *this;
+        ans.neg_();
+        return ans;
     }
 
     // 矩阵类
@@ -293,7 +353,7 @@ namespace SPARSE{
 
         public:
         MAT(size_t rows = 1, size_t cols = 1);
-        const MAT<T, unit_size> & operator = (const MAT<T, unit_size> &b);
+        MAT<T, unit_size> & operator = (const MAT<T, unit_size> &b);
         MAT(const MAT &b);
         ~MAT();
 
@@ -347,9 +407,21 @@ namespace SPARSE{
             ROOT->test_print(ROOT);
         }
 
+        // 置零
+        void setZero_();
+        MAT<T, unit_size> setZero() const;
+
         // 转置
         void transpose_();
         MAT<T, unit_size> transpose() const;
+
+        // 矩阵按位和
+        void add_(const MAT<T, unit_size> &b);
+        MAT<T, unit_size> operator + (const MAT<T, unit_size> &b) const;
+
+        // 矩阵按位差
+        void sub_(const MAT<T, unit_size> &b);
+        MAT<T, unit_size> operator - (const MAT<T, unit_size> &b) const;
     };
 
     template<class T, size_t unit_size>
@@ -380,7 +452,10 @@ namespace SPARSE{
     }
 
     template<class T, size_t unit_size>
-    const MAT<T, unit_size> & MAT<T, unit_size>::operator = (const MAT<T, unit_size> &b) {
+    MAT<T, unit_size> & MAT<T, unit_size>::operator = (const MAT<T, unit_size> &b) {
+
+        if (this == &b) return *this;
+
         this->cols = b.cols;
         this->rows = b.rows;
         if (b.isBlank()) {
@@ -421,7 +496,7 @@ namespace SPARSE{
             q_ptr_b.pop();
         }
 
-        return b;
+        return *this;
     }
 
     template<class T, size_t unit_size>
@@ -469,6 +544,18 @@ namespace SPARSE{
     }
 
     template<class T, size_t unit_size>
+    void MAT<T, unit_size>::setZero_() {
+        del(this->ROOT);
+        this->ROOT = nullptr;
+    }
+
+    template<class T, size_t unit_size>
+    MAT<T, unit_size> MAT<T, unit_size>::setZero() const {
+        MAT<T, unit_size> ans(this->rows, this->cols);
+        return ans;
+    }
+
+    template<class T, size_t unit_size>
     void MAT<T, unit_size>::transpose_() {
 
         size_t tmp_size = this->cols;
@@ -505,6 +592,107 @@ namespace SPARSE{
     MAT<T, unit_size> MAT<T, unit_size>::transpose() const {
         MAT<T, unit_size> ans = *this;
         ans.transpose_();
+        return ans;
+    }
+
+    template<class T, size_t unit_size>
+    void MAT<T, unit_size>::add_(const MAT<T, unit_size> & b) {
+
+        // check for size
+        if (this->cols != b.cols || this->rows != b.rows) {
+            IndexOutOfRangeException("Wrong size!");
+        }
+
+        if (b.isBlank()) return;
+
+        if (this->isBlank()) {
+            this->ROOT = new TREENODE<Eigen::Matrix<T, unit_size, unit_size>>(b.ROOT->deepth);
+            *(this->ROOT) = *(b.ROOT);
+        }
+
+        std::queue<TREENODE<Eigen::Matrix<T, unit_size, unit_size>> *> q_ptr_this;
+        std::queue<TREENODE<Eigen::Matrix<T, unit_size, unit_size>> *> q_ptr_b;
+        
+        q_ptr_this.push(this->ROOT);
+        q_ptr_b.push(b.ROOT);
+        while(!q_ptr_this.empty()) {
+            TREENODE<Eigen::Matrix<T, unit_size, unit_size>> * ptr_this = q_ptr_this.front();
+            TREENODE<Eigen::Matrix<T, unit_size, unit_size>> * ptr_b = q_ptr_b.front();
+
+            for (short i = 0; i < 4; i++){
+                if (ptr_b->CHILD[i] != nullptr) {
+                    if (ptr_this->CHILD[i] == nullptr) {
+                        ptr_this->CHILD[i] = new TREENODE<Eigen::Matrix<T, unit_size, unit_size>>(*(ptr_b->CHILD[i]));
+                    } else {
+                        ptr_this->CHILD[i]->add_(*(ptr_b->CHILD[i]));
+                    }
+
+                    q_ptr_this.push(ptr_this->CHILD[i]);
+                    q_ptr_b.push(ptr_b->CHILD[i]);
+                }
+            }
+
+            q_ptr_this.pop();
+            q_ptr_b.pop();
+        }
+
+    }
+
+    template<class T, size_t unit_size>
+    MAT<T, unit_size> MAT<T, unit_size>::operator+ (const MAT<T, unit_size> & b) const {
+        MAT<T, unit_size> ans = *this;
+        ans.add_(b);
+        return ans;
+    }
+
+    template<class T, size_t unit_size>
+    void MAT<T, unit_size>::sub_(const MAT<T, unit_size> & b) {
+
+        // check for size
+        if (this->cols != b.cols || this->rows != b.rows) {
+            IndexOutOfRangeException("Wrong size!");
+        }
+
+        if (b.isBlank()) return;
+
+        if (this->isBlank()) {
+            this->ROOT = new TREENODE<Eigen::Matrix<T, unit_size, unit_size>>(b.ROOT->deepth);
+            *(this->ROOT) = -*(b.ROOT);
+        }
+
+        std::queue<TREENODE<Eigen::Matrix<T, unit_size, unit_size>> *> q_ptr_this;
+        std::queue<TREENODE<Eigen::Matrix<T, unit_size, unit_size>> *> q_ptr_b;
+        
+        q_ptr_this.push(this->ROOT);
+        q_ptr_b.push(b.ROOT);
+        while(!q_ptr_this.empty()) {
+            TREENODE<Eigen::Matrix<T, unit_size, unit_size>> * ptr_this = q_ptr_this.front();
+            TREENODE<Eigen::Matrix<T, unit_size, unit_size>> * ptr_b = q_ptr_b.front();
+
+            for (short i = 0; i < 4; i++){
+                if (ptr_b->CHILD[i] != nullptr) {
+                    if (ptr_this->CHILD[i] == nullptr) {
+                        ptr_this->CHILD[i] = new TREENODE<Eigen::Matrix<T, unit_size, unit_size>>(*(ptr_b->CHILD[i]));
+                        ptr_this->CHILD[i]->neg_();
+                    } else {
+                        ptr_this->CHILD[i]->sub_(*(ptr_b->CHILD[i]));
+                    }
+
+                    q_ptr_this.push(ptr_this->CHILD[i]);
+                    q_ptr_b.push(ptr_b->CHILD[i]);
+                }
+            }
+
+            q_ptr_this.pop();
+            q_ptr_b.pop();
+        }
+
+    }
+
+    template<class T, size_t unit_size>
+    MAT<T, unit_size> MAT<T, unit_size>::operator- (const MAT<T, unit_size> & b) const {
+        MAT<T, unit_size> ans = *this;
+        ans.sub_(b);
         return ans;
     }
 }

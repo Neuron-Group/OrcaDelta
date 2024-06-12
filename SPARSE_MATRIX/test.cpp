@@ -30,9 +30,9 @@ class myClass {
 };
 
 int main(){
-    int T = 10;
+    int T = 51;
 
-    SPARSE::MAT<float, 1> mata(T, T);
+    SPARSE::MAT<float, 3> mata(T, T);
 
     for (int i = 0; i < T; i++) {
         for (int j = 0; j < T; j ++){
@@ -47,16 +47,61 @@ int main(){
         cout << endl;
     }
     cout << endl;
-    // mata.transpose_();
+    SPARSE::MAT<float, 3> matb(T, T);
+    matb = mata.transpose();
+
     for (int i = 0; i < T; i++) {
         for (int j = 0; j < T; j++){
-            cout << mata.transpose().getVal(i, j) << " ";
+            cout << matb.getVal(i, j) << " ";
         }
         cout << endl;
     }
 
     cout << endl;
+    for (int i = 0; i < T; i++) {
+        for (int j = 0; j < T; j++){
+            cout << (mata + matb).getVal(i, j) << " ";
+        }
+        cout << endl;
+    }
 
+    matb = mata.setZero();
+    mata.setZero_();
+
+    for (int i = 0; i < T; i++) {
+        for (int j = 0; j < T; j ++){
+            if (i == j) mata.insert(i, i, j);
+        }
+    }
+    for (int i = 0; i < T; i++) {
+        for (int j = 0; j < T; j ++){
+            if (i == T-j-1) matb.insert(i, i, j);
+        }
+    }
+
+    for (int i = 0; i < T; i++) {
+        for (int j = 0; j < T; j++){
+            cout << mata.getVal(i, j) << " ";
+        }
+        cout << endl;
+    }
+    cout << endl;
+
+    for (int i = 0; i < T; i++) {
+        for (int j = 0; j < T; j++){
+            cout << matb.getVal(i, j) << " ";
+        }
+        cout << endl;
+    }
+
+    cout << endl;
+    for (int i = 0; i < T; i++) {
+        for (int j = 0; j < T; j++){
+            cout << (mata - matb).getVal(i, j) << " ";
+        }
+        cout << endl;
+    }
+    /*
     SPARSE::MAT<float, 3> vec(10, 1);
     for (int i = 0; i < 10; i++) {
         vec.insert(i, i, 0);
@@ -70,4 +115,5 @@ int main(){
         cout << vec.transpose().getVal(0, i) << " ";
     }
     cout << endl;
+    */
 }
