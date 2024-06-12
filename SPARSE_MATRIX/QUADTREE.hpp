@@ -424,7 +424,7 @@ namespace SPARSE{
 
         bool insert(T data, size_t i, size_t j){
             check_idx_with_error(i, j);
-            if (this->iszero_sca(data)) return true;
+            // if (this->iszero_sca(data)) return true;
             if (check_idx(i, j) != true) return false;
             size_t I = IDX(i);
             size_t J = IDX(j);
