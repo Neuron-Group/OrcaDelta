@@ -374,6 +374,12 @@ namespace SPARSE{
             }
         }
 
+        // 移除单个节点
+        void del_single_node(TREENODE<Eigen::Matrix<T, unit_size, unit_size>> * & node) {
+            delete node;
+            node = nullptr;
+        }
+
         // 删除 0 元素及其分支
         short removezero(TREENODE<Eigen::Matrix<T, unit_size, unit_size>> * & root) {
             if (root == nullptr) {
@@ -382,14 +388,11 @@ namespace SPARSE{
 
             if (root->deepth == 0) {
                 if (root->dataNode == nullptr) {
-                    // del(root);
-                    delete root;
-                    root = nullptr;
+                    del_single_node(root);
                     return 0;
                 } else {
                     if (iszero_mat(*(root->dataNode))) {
-                        delete root;
-                        root = nullptr;
+                        del_single_node(root);
                         return 0;
                     } else {
                         return 1;
@@ -404,8 +407,7 @@ namespace SPARSE{
             }
 
             if (flag == 0) {
-                delete root;
-                root = nullptr;
+                del_single_node(root);
                 return 0;
             } else {
                 return 1;
@@ -422,6 +424,7 @@ namespace SPARSE{
             return (this->ROOT == nullptr) ? true : false;
         }
 
+        /*
         bool insert(T data, size_t i, size_t j){
             check_idx_with_error(i, j);
             // if (this->iszero_sca(data)) return true;
@@ -450,6 +453,94 @@ namespace SPARSE{
             }
             this->initForData(ptr);
             (*(ptr->dataNode))(IDX_(i), IDX_(j)) = data;
+            return true;
+        }
+        */
+
+       bool insert(T data, size_t i, size_t j){
+            check_idx_with_error(i, j);
+            // if (this->iszero_sca(data)) return true;
+            if (check_idx(i, j) != true) return false;
+            size_t I = IDX(i);
+            size_t J = IDX(j);
+            if(isBlank()){
+                this->ROOT = new TREENODE<Eigen::Matrix<T, unit_size, unit_size>>(this->quadtree_high()-1);
+                if (this->ROOT->deepth == 0) {
+                    this->initForData(ROOT);
+                }
+            }
+            std::stack<TREENODE<Eigen::Matrix<T, unit_size, unit_size>> *> ptr_stk;
+            std::stack<short> dir_stk;
+
+            TREENODE<Eigen::Matrix<T, unit_size, unit_size>> * ptr = ROOT;
+            // ptr_stk.push(ROOT);
+            while (ptr->deepth > 0) {
+                short k = 0;
+                if (I & (1<<(ptr->deepth-1))){
+                    k = k | 1;
+                }
+                if (J & (1<<(ptr->deepth-1))){
+                    k = k | 2;
+                }
+                if (ptr->CHILD[k] == nullptr){
+                    ptr->CHILD[k] = new TREENODE<Eigen::Matrix<T, unit_size, unit_size>>(ptr->deepth - 1);
+                }
+                ptr_stk.push(ptr->CHILD[k]);
+                dir_stk.push(k);
+                ptr = ptr->CHILD[k];
+            }
+            this->initForData(ptr);
+            (*(ptr->dataNode))(IDX_(i), IDX_(j)) = data;
+
+            // 清除 0 元素
+            if (iszero_mat(*(ptr->dataNode)) && this->autoformat == true) {
+
+                // ptr = ptr_stk.top();
+                if (ptr == ROOT) {
+                    delete ptr;
+                    ROOT = nullptr;
+                    return true;
+                }
+                delete ptr;
+                ptr_stk.pop();
+
+                short k;
+
+                while(!ptr_stk.empty()) {
+                    
+                    ptr = ptr_stk.top();
+                    k = dir_stk.top();
+                    ptr->CHILD[k] = nullptr;
+                    
+                    short child_cnt = 0;
+                    if(ptr->CHILD[0] != nullptr) child_cnt++;
+                    if(ptr->CHILD[1] != nullptr) child_cnt++;
+                    if(ptr->CHILD[2] != nullptr) child_cnt++;
+                    if(ptr->CHILD[3] != nullptr) child_cnt++;
+                    
+                    if (child_cnt != 0) {
+                        return true;
+                    }
+
+                    delete ptr;
+
+                    ptr_stk.pop();
+                    dir_stk.pop();
+                }
+
+                k = dir_stk.top();
+                ROOT->CHILD[k] = nullptr;
+
+                short child_cnt = 0;
+                if(ROOT->CHILD[0] != nullptr) child_cnt++;
+                if(ROOT->CHILD[1] != nullptr) child_cnt++;
+                if(ROOT->CHILD[2] != nullptr) child_cnt++;
+                if(ROOT->CHILD[3] != nullptr) child_cnt++;
+
+                if (child_cnt == 0) {
+                    del_single_node(this->ROOT);
+                }
+            }
             return true;
         }
 
@@ -504,7 +595,7 @@ namespace SPARSE{
 
         // 设置自动稀疏化
         void setAutoFormat(const bool autoFormat) {
-            this->autoformat = autoformat;
+            this->autoformat = autoFormat;
         }
 
         // 置零
@@ -580,25 +671,31 @@ namespace SPARSE{
         std::queue<TREENODE<Eigen::Matrix<T, unit_size, unit_size>> *> q_ptr_this;
         std::queue<TREENODE<Eigen::Matrix<T, unit_size, unit_size>> *> q_ptr_b;
         
+        TREENODE<Eigen::Matrix<T, unit_size, unit_size>> * ptr_this;
+        TREENODE<Eigen::Matrix<T, unit_size, unit_size>> * ptr_b;
+        
         q_ptr_this.push(this->ROOT);
         q_ptr_b.push(b.ROOT);
+
         while(!q_ptr_this.empty()) {
-            TREENODE<Eigen::Matrix<T, unit_size, unit_size>> * ptr_this = q_ptr_this.front();
-            TREENODE<Eigen::Matrix<T, unit_size, unit_size>> * ptr_b = q_ptr_b.front();
+            ptr_this = q_ptr_this.front();
+            ptr_b = q_ptr_b.front();
 
-            for (short i = 0; i < 4; i++){
-                if (ptr_b->CHILD[i] == nullptr) {
-                    del(ptr_this->CHILD[i]);
-                    ptr_this->CHILD[i] = nullptr;
-                } else {
-                    if (ptr_this->CHILD[i] == nullptr) {
-                        ptr_this->CHILD[i] = new TREENODE<Eigen::Matrix<T, unit_size, unit_size>>(*(ptr_b->CHILD[i]));
+            if (ptr_this->deepth == 0) {
+                (*(ptr_this)) = (*(ptr_b));
+            } else {
+                for (short i = 0; i < 4; i++){
+                    if (ptr_b->CHILD[i] != nullptr) {
+                        if (ptr_this->CHILD[i] == nullptr) {
+                            ptr_this->CHILD[i] = new TREENODE<Eigen::Matrix<T, unit_size, unit_size>>(
+                                    ptr_this->deepth - 1
+                                );
+                        }
+                        q_ptr_this.push(ptr_this->CHILD[i]);
+                        q_ptr_b.push(ptr_b->CHILD[i]);
                     } else {
-                        *(ptr_this->CHILD[i]) = *(ptr_b->CHILD[i]);
+                        del(ptr_this->CHILD[i]);
                     }
-
-                    q_ptr_this.push(ptr_this->CHILD[i]);
-                    q_ptr_b.push(ptr_b->CHILD[i]);
                 }
             }
 
@@ -627,26 +724,27 @@ namespace SPARSE{
 
         std::queue<TREENODE<Eigen::Matrix<T, unit_size, unit_size>> *> q_ptr_this;
         std::queue<TREENODE<Eigen::Matrix<T, unit_size, unit_size>> *> q_ptr_b;
+
+        TREENODE<Eigen::Matrix<T, unit_size, unit_size>> * ptr_this;
+        TREENODE<Eigen::Matrix<T, unit_size, unit_size>> * ptr_b;
         
         q_ptr_this.push(this->ROOT);
         q_ptr_b.push(b.ROOT);
         while(!q_ptr_this.empty()) {
-            TREENODE<Eigen::Matrix<T, unit_size, unit_size>> * ptr_this = q_ptr_this.front();
-            TREENODE<Eigen::Matrix<T, unit_size, unit_size>> * ptr_b = q_ptr_b.front();
+            ptr_this = q_ptr_this.front();
+            ptr_b = q_ptr_b.front();
 
-            for (short i = 0; i < 4; i++){
-                if (ptr_b->CHILD[i] == nullptr) {
-                    del(ptr_this->CHILD[i]);
-                    ptr_this->CHILD[i] = nullptr;
-                } else {
-                    if (ptr_this->CHILD[i] == nullptr) {
-                        ptr_this->CHILD[i] = new TREENODE<Eigen::Matrix<T, unit_size, unit_size>>(*(ptr_b->CHILD[i]));
-                    } else {
-                        *(ptr_this->CHILD[i]) = *(ptr_b->CHILD[i]);
+            if (ptr_this->deepth == 0) {
+                (*(ptr_this)) = (*(ptr_b));
+            } else {
+                for (short i = 0; i < 4; i++){
+                    if (ptr_b->CHILD[i] != nullptr) {
+                        ptr_this->CHILD[i] = new TREENODE<Eigen::Matrix<T, unit_size, unit_size>>(
+                                ptr_this->deepth - 1
+                            );
+                        q_ptr_this.push(ptr_this->CHILD[i]);
+                        q_ptr_b.push(ptr_b->CHILD[i]);
                     }
-
-                    q_ptr_this.push(ptr_this->CHILD[i]);
-                    q_ptr_b.push(ptr_b->CHILD[i]);
                 }
             }
 
@@ -709,7 +807,6 @@ namespace SPARSE{
 
     template<class T, size_t unit_size>
     void MAT<T, unit_size>::add_(const MAT<T, unit_size> & b) {
-
         // check for size
         if (this->cols != b.cols || this->rows != b.rows) {
             IndexOutOfRangeException("Wrong size!");
@@ -718,38 +815,43 @@ namespace SPARSE{
         if (b.isBlank()) return;
 
         if (this->isBlank()) {
-            this->ROOT = new TREENODE<Eigen::Matrix<T, unit_size, unit_size>>(b.ROOT->deepth);
-            *(this->ROOT) = *(b.ROOT);
+            this->ROOT = new TREENODE<Eigen::Matrix<T, unit_size, unit_size>>(*(b.ROOT));
         }
 
         std::queue<TREENODE<Eigen::Matrix<T, unit_size, unit_size>> *> q_ptr_this;
         std::queue<TREENODE<Eigen::Matrix<T, unit_size, unit_size>> *> q_ptr_b;
         
+        TREENODE<Eigen::Matrix<T, unit_size, unit_size>> * ptr_this;
+        TREENODE<Eigen::Matrix<T, unit_size, unit_size>> * ptr_b;
+        
         q_ptr_this.push(this->ROOT);
         q_ptr_b.push(b.ROOT);
+        
         while(!q_ptr_this.empty()) {
-            TREENODE<Eigen::Matrix<T, unit_size, unit_size>> * ptr_this = q_ptr_this.front();
-            TREENODE<Eigen::Matrix<T, unit_size, unit_size>> * ptr_b = q_ptr_b.front();
 
-            for (short i = 0; i < 4; i++){
-                if (ptr_b->CHILD[i] != nullptr) {
-                    if (ptr_this->CHILD[i] == nullptr) {
-                        ptr_this->CHILD[i] = new TREENODE<Eigen::Matrix<T, unit_size, unit_size>>(*(ptr_b->CHILD[i]));
-                    } else {
-                        ptr_this->CHILD[i]->add_(*(ptr_b->CHILD[i]));
+            ptr_this = q_ptr_this.front();
+            ptr_b = q_ptr_b.front();
+
+            if (ptr_this->deepth == 0) {
+                (*(ptr_this)).add_(*(ptr_b));
+            } else {
+                for (short i = 0; i < 4; i++){
+                    if(ptr_b->CHILD[i] != nullptr) {
+                        if (ptr_this->CHILD[i] == nullptr) {
+                            ptr_this->CHILD[i] = new TREENODE<Eigen::Matrix<T, unit_size, unit_size>>(
+                                ptr_this->deepth - 1
+                            );
+                        }
+                        q_ptr_this.push(ptr_this->CHILD[i]);
+                        q_ptr_b.push(ptr_b->CHILD[i]);
                     }
-
-                    q_ptr_this.push(ptr_this->CHILD[i]);
-                    q_ptr_b.push(ptr_b->CHILD[i]);
                 }
             }
 
             q_ptr_this.pop();
             q_ptr_b.pop();
         }
-
-        if(autoformat) format();
-
+        if (autoformat) format();
     }
 
     template<class T, size_t unit_size>
@@ -788,17 +890,19 @@ namespace SPARSE{
             ptr_this = q_ptr_this.front();
             ptr_b = q_ptr_b.front();
 
-            for (short i = 0; i < 4; i++){
-                if (ptr_b->CHILD[i] != nullptr) {
-                    if (ptr_this->CHILD[i] == nullptr) {
-                        ptr_this->CHILD[i] = new TREENODE<Eigen::Matrix<T, unit_size, unit_size>>(*(ptr_b->CHILD[i]));
-                        ptr_this->CHILD[i]->neg_();
-                    } else {
-                        ptr_this->CHILD[i]->sub_(*(ptr_b->CHILD[i]));
+            if (ptr_this->deepth == 0) {
+                (*(ptr_this)).sub_(*(ptr_b));
+            } else {
+                for (short i = 0; i < 4; i++){
+                    if(ptr_b->CHILD[i] != nullptr) {
+                        if (ptr_this->CHILD[i] == nullptr) {
+                            ptr_this->CHILD[i] = new TREENODE<Eigen::Matrix<T, unit_size, unit_size>>(
+                                ptr_this->deepth - 1
+                            );
+                        }
+                        q_ptr_this.push(ptr_this->CHILD[i]);
+                        q_ptr_b.push(ptr_b->CHILD[i]);
                     }
-
-                    q_ptr_this.push(ptr_this->CHILD[i]);
-                    q_ptr_b.push(ptr_b->CHILD[i]);
                 }
             }
 

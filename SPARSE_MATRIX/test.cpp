@@ -30,7 +30,7 @@ class myClass {
 };
 
 int main(){
-    int T = 51;
+    int T = 3;
 
     SPARSE::MAT<float, 3> mata(T, T, true);
 
@@ -48,29 +48,31 @@ int main(){
         matb.insert(j, T-j-1, j);
     }
 
-    cout << "mata = " << endl;
+    cout << "\n\n mata = " << endl;
     mata.test();
 
-    cout << "matb = " << endl;
+    cout << "\n\n matb = " << endl;
     matb.test();
 
-    matb = matb - mata;
-    mata = matb + mata;
+    matb = matb + mata;
+    mata = matb - mata;
 
-    cout << "matb - mata + mata = matb = " << endl;
+    cout << "\n\n matb - mata + mata = matb = " << endl;
     mata.test();
 
-    cout << "matb - mata = " << endl;
+    cout << "matb + mata = " << endl;
     matb.test();
 
     mata.neg_();
 
-    cout << "-matb = " << endl;
+    mata.setAutoFormat(true);
+
+    cout << "\n\n -matb = " << endl;
     mata.test();
 
     matb = -mata;
 
-    cout << "matb = " << endl;
+    cout << "\n\n matb = " << endl;
     matb.test();
     // cout << endl;
     /*
@@ -87,6 +89,18 @@ int main(){
         // cout << vec.transpose().getVal(0, i) << " ";
     }
     // cout << endl;
+    */
+
+    /*
+    matb = -matb;
+    matb.insert(0, 3, 2);
+    matb.test();
+
+    matb.insert(0, 4, 1);
+    matb.test();
+
+    matb.insert(0, 5, 0);
+    matb.test();
     */
 
     cout << mata.size().getVal(0, 0) << endl;
