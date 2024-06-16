@@ -1,56 +1,51 @@
-        copy_node(M1, src->CHILD[2]);
-        copy_node(M2, a->CHILD[0]);
-        copy_node(M3, a->CHILD[1]);
-        copy_node(M4, src->CHILD[1]);
-        copy_node(M5, a->CHILD[0]);
-        copy_node(M5_, src->CHILD[0]);
-        copy_node(M6, a->CHILD[2]);
-        copy_node(M6_, src->CHILD[1]);
-        copy_node(M7, a->CHILD[0]);
-        copy_node(M7_, src->CHILD[0]);
+// ptr_ans->CHILD[2] = ptr_ans->CHILD[2]
+                    // ptr_this->CHILD[2] = ptr_this->CHILD[2]
+                    if (ptr_ans->CHILD[2] == ptr_this->CHILD[2]) return;
 
-        sub_node(M1, src->CHILD[3]);
-        M1 = mul_node_right(a->CHILD[0], M1);
+                    if (ptr_this->CHILD[2] == nullptr) {
+                        del(ptr_ans->CHILD[2]);
+                        return;
+                    }
 
-        add_node(M2, a->CHILD[2]);
-        M2 = mul_node_right(M2, src->CHILD[3]);
+                    if (ptr_ans->CHILD[2] == nullptr) {
+                        ptr_ans->CHILD[2] = new TREENODE<Eigen::Matrix<T, unit_size, unit_size>>(ptr_this->CHILD[2]->deepth);
+                        *(ptr_ans->CHILD[2]) = *(ptr_this->CHILD[2]);
+                    }
 
-        add_node(M3, a->CHILD[3]);
-        M3 = mul_node_right(M3, src->CHILD[0]);
+                    std::queue<TREENODE<Eigen::Matrix<T, unit_size, unit_size>> *> q_ptr_this_copy;
+                    std::queue<TREENODE<Eigen::Matrix<T, unit_size, unit_size>> *> q_ptr_b_copy;
+                    
+                    TREENODE<Eigen::Matrix<T, unit_size, unit_size>> * ptr_this_copy;
+                    TREENODE<Eigen::Matrix<T, unit_size, unit_size>> * ptr_b_copy;
+                    
+                    q_ptr_this_copy.push(ptr_ans->CHILD[2]);
+                    q_ptr_b_copy.push(ptr_this->CHILD[2]);
 
-        sub_node(M4, src->CHILD[0]);
-        M4 = mul_node_right(a->CHILD[3], M4);
+                    while(!q_ptr_this_copy.empty()) {
+                        ptr_this_copy = q_ptr_this_copy.front();
+                        ptr_b_copy = q_ptr_b_copy.front();
 
-        add_node(M5, a->CHILD[3]);
-        add_node(M5_, src->CHILD[3]);
+                        if (ptr_this_copy->deepth == 0) {
+                            (*(ptr_this_copy)) = (*(ptr_b_copy));
+                        } else {
+                            for (short i = 0; i < 4; i++){
+                                if (ptr_b_copy->CHILD[i] != nullptr) {
+                                    if (ptr_this_copy->CHILD[i] == nullptr) {
+                                        ptr_this_copy->CHILD[i] = new TREENODE<Eigen::Matrix<T, unit_size, unit_size>>(
+                                                ptr_this_copy->deepth - 1
+                                            );
+                                    }
+                                    q_ptr_this_copy.push(ptr_this_copy->CHILD[i]);
+                                    q_ptr_b_copy.push(ptr_b_copy->CHILD[i]);
+                                } else {
+                                    del(ptr_this_copy->CHILD[i]);
+                                }
+                            }
+                        }
 
-        sub_node(M6, a->CHILD[3]);
-        add_node(M6_, src->CHILD[3]);
+                        q_ptr_this_copy.pop();
+                        q_ptr_b_copy.pop();
+                    }
 
-        sub_node(M7, a->CHILD[1]);
-        add_node(M7_, src->CHILD[2]);
-
-        M5 = mul_node_right(M5, M5_);
-        del(M5_);
-
-        M6 = mul_node_right(M6, M6_);
-        del(M6_);
-
-        M7 = mul_node_right(M7, M7_);
-        del(M7_);
-
-        add_node(M6, M4);
-        add_node(M6, M5);
-        sub_node(M6, M2);
-
-        add_node(M2, M1);
-
-        add_node(M4, M3);
-
-        add_node(M5, M1);
-        sub_node(M5, M3);
-        sub_node(M5, M7);
-
-        del(M1);
-        del(M3);
-        del(M7);
+                    return;
+                    // 

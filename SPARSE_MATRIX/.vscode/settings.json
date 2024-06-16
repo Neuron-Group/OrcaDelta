@@ -87,6 +87,8 @@
         "typeinfo": "cpp",
         "valarray": "cpp",
         "variant": "cpp",
-        "queue": "cpp"
+        "queue": "cpp",
+        "tmp_file": "c",
+        "core": "c"
     }
 }

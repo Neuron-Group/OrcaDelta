@@ -16,7 +16,7 @@ public:
         int rand_num = dist(rng_);
         
         // 更新随机数生成器种子
-        rng_.seed(rand_num);
+        rng_.seed(rand_num*234748);
         
         return rand_num;
     }
