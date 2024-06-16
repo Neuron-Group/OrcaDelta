@@ -345,7 +345,7 @@ namespace SPARSE{
             return idx%unit_size;
         }
 
-        bool check_idx(size_t i, size_t j){
+        bool check_idx(const size_t i, const size_t j){
             return (i < this->rows && j < this->cols) ? true : false;
         }
 
@@ -791,6 +791,8 @@ namespace SPARSE{
         void divWithEle_(const MAT<T, unit_size> &b);
         MAT<T, unit_size> divWithEle(const MAT<T, unit_size> &b) const;
 
+        MAT<T, unit_size> operator / (const MAT<T, unit_size> &b) const;
+
         // 取出对角线元素（原位）
         void diag2vec_();
         // 取出对角线元素
@@ -824,6 +826,9 @@ namespace SPARSE{
 
         // 原位上三角矩阵（包含对角线）
         void uWithDiag_();
+
+        // 模
+        T norm() const;
     };
 
     template<class T, size_t unit_size>
@@ -1211,25 +1216,49 @@ namespace SPARSE{
         TREENODE<Eigen::Matrix<T, unit_size, unit_size>> * ptr;
         this->ROOT = new TREENODE<Eigen::Matrix<T, unit_size, unit_size>>(this->quadtree_high()-1);
 
+        std::queue<size_t> q_I;
+        std::queue<size_t> q_J;
+
+        size_t I, I_;
+        size_t J, J_;
+        
         q.push(this->ROOT);
+        q_I.push(0);
+        q_J.push(0);
 
         while (!q.empty()) {
             ptr = q.front();
+            I = q_I.front();
+            J = q_J.front();
 
             if (ptr->deepth == 0) {
                 ptr->dataNode = new Eigen::Matrix<T, unit_size, unit_size>;
                 ptr->dataNode->setZero();
-                for (size_t k = 0; k < unit_size; k++) {
-                    (*(ptr->dataNode))(k, k) = static_cast<T>(1);
+                I_ = I*unit_size;
+                J_ = J*unit_size;
+                if (I_ < rows && J_ < cols && ((I_ + unit_size) > rows || (J_ + unit_size) > cols)) {
+                    for (size_t i = 0; i < std::min(rows - I*unit_size, cols - J*unit_size); i++) {
+                        (*(ptr->dataNode))(i, i) = static_cast<T>(1);
+                    }
+                } else if (I_ < rows && J_ < cols && ((I_ + unit_size) <= rows && (J_ + unit_size) <= cols)) {
+                    for (size_t i = 0; i < unit_size; i++) {
+                        (*(ptr->dataNode))(i, i) = static_cast<T>(1);
+                    }
                 }
             } else {
                 ptr->CHILD[0] = new TREENODE<Eigen::Matrix<T, unit_size, unit_size>>(ptr->deepth - 1);
                 ptr->CHILD[3] = new TREENODE<Eigen::Matrix<T, unit_size, unit_size>>(ptr->deepth - 1);
                 q.push(ptr->CHILD[0]);
                 q.push(ptr->CHILD[3]);
+                q_I.push(I);
+                q_I.push(I + (1<<(ptr->deepth - 1)));
+                q_J.push(J);
+                q_J.push(J + (1<<(ptr->deepth - 1)));
             }
 
             q.pop();
+            q_I.pop();
+            q_J.pop();
         }
     }
 
@@ -1933,6 +1962,70 @@ namespace SPARSE{
         MAT<T, unit_size> ans(*this);
         ans.divWithEle_(b);
         return ans;
+    }
+
+    template<class T, size_t unit_size>
+    MAT<T, unit_size> MAT<T, unit_size>::operator / (const MAT<T, unit_size> &b) const {
+        return this->divWithEle(b);
+    }
+
+    template<class T, size_t unit_size>
+    T MAT<T, unit_size>::norm() const {
+        T ans = static_cast<T>(0);
+        if(isBlank()) return ans;
+        
+        std::queue<TREENODE<Eigen::Matrix<T, unit_size, unit_size>> *> q;
+        TREENODE<Eigen::Matrix<T, unit_size, unit_size>> * ptr;
+        
+        std::queue<size_t> q_I;
+        std::queue<size_t> q_J;
+
+        size_t I;
+        size_t J;
+        
+        q.push(this->ROOT);
+        q_I.push(0);
+        q_J.push(0);
+
+        while(!q.empty()) {
+            ptr = q.front();
+
+            I = q_I.front();
+            J = q_J.front();
+
+            size_t I_, J_;
+
+            if (ptr->deepth == 0) {
+                if (ptr->dataNode != nullptr) {
+                    I_ = I*unit_size;
+                    J_ = J*unit_size;
+                    if (I_ < rows && J_ < cols && ((I_ + unit_size) > rows || (J_ + unit_size) > cols)) {
+                        for (size_t i = 0; i < std::min(rows - I*unit_size, unit_size); i++) {
+                            for (size_t j = 0; j < std::min(cols - J*unit_size, unit_size); j++) {
+                                ans += ((*(ptr->dataNode))(i,j))*((*(ptr->dataNode))(i,j));
+                            }
+                        }
+                    } else if (I_ < rows && J_ < cols && ((I_ + unit_size) <= rows && (J_ + unit_size) <= cols)) {
+                        ans += pow((*(ptr->dataNode)).norm(), 2);
+                    }
+                }
+            } else {
+                for (short k = 0; k < 4; k++) {
+                    I_ = I + (k & 1)*(1<<(ptr->deepth - 1));
+                    J_ = J + ((k & 2) >> 1)*(1<<(ptr->deepth - 1));
+                    if (ptr->CHILD[k] != nullptr) {
+                        q.push(ptr->CHILD[k]);
+                        q_I.push(I_);
+                        q_J.push(J_);
+                    }
+                }
+            }
+            q.pop();
+            q_I.pop();
+            q_J.pop();
+        }
+
+        return sqrt(ans);
     }
 
     template<class T, size_t unit_size>

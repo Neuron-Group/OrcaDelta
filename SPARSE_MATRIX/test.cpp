@@ -5,6 +5,7 @@
 #include "QUADTREE.hpp"
 #include "cmath"
 #include "RANDOM.hpp"
+#include "SOLVER.hpp"
 
 using namespace std;
 
@@ -31,38 +32,24 @@ class myClass {
 };
 
 int main(){
+    size_t T = 50;
+    SPARSE::MAT<float, 3> A(T, T);
+    A.eye_();
+    A.mul_(-2);
 
-    RandomGenerator T1_rnd(1, 10);
-    RandomGenerator T2_rnd(1, 10);
-
-    RandomGenerator ele_rnd(-50, 50);
-
-    int T1 = T1_rnd();
-    int T2 = T2_rnd();
-
-    SPARSE::MAT<float, 3> mata(T1, T2, true);
-    SPARSE::MAT<float, 3> matb(T1, T2, true);
-    SPARSE::MAT<float, 3> matc(T1, T1, true);
-
-    Eigen::MatrixXf mat_a(T1, T2);
-    Eigen::MatrixXf mat_b(T2, T1);
-    Eigen::MatrixXf mat_c(T1, T1);
-    
-
-    for (int i = 0; i < T1; i++) {
-        for (int j = 0; j < T2; j ++) {
-            int ele_a = ele_rnd();
-            mata.insert(static_cast<float>(i+1), i, j);
-            // mat_a(i, j) = static_cast<float>(ele_a);
-
-            int ele_b = ele_rnd();
-            matb.insert(static_cast<float>(j+1), i, j);
-            // mat_b(j, i) = static_cast<float>(ele_b);
-        }
+    for (size_t i = 0; i < T-1; i++) {
+        A.insert(1, i+1, i);
+        A.insert(1, i, i+1);
     }
-    mata.test();
-    matb.test();
-    SPARSE::divWithEle(mata, matb).test();
 
-    SPARSE::eye<float, 3>(7).test();
+    SPARSE::MAT<float, 3> b(T, 1);
+    b.insert(-1, 0, 0);
+    b.insert(-1, T-1, 0);
+    SPARSE::MAT<float, 3> x(T, 1);
+
+    vector<float> err;
+
+    Gongetidu(A, x, b, err);
+
+    x.test();
 }
