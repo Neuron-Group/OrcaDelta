@@ -1,0 +1,56 @@
+        copy_node(M1, src->CHILD[2]);
+        copy_node(M2, a->CHILD[0]);
+        copy_node(M3, a->CHILD[1]);
+        copy_node(M4, src->CHILD[1]);
+        copy_node(M5, a->CHILD[0]);
+        copy_node(M5_, src->CHILD[0]);
+        copy_node(M6, a->CHILD[2]);
+        copy_node(M6_, src->CHILD[1]);
+        copy_node(M7, a->CHILD[0]);
+        copy_node(M7_, src->CHILD[0]);
+
+        sub_node(M1, src->CHILD[3]);
+        M1 = mul_node_right(a->CHILD[0], M1);
+
+        add_node(M2, a->CHILD[2]);
+        M2 = mul_node_right(M2, src->CHILD[3]);
+
+        add_node(M3, a->CHILD[3]);
+        M3 = mul_node_right(M3, src->CHILD[0]);
+
+        sub_node(M4, src->CHILD[0]);
+        M4 = mul_node_right(a->CHILD[3], M4);
+
+        add_node(M5, a->CHILD[3]);
+        add_node(M5_, src->CHILD[3]);
+
+        sub_node(M6, a->CHILD[3]);
+        add_node(M6_, src->CHILD[3]);
+
+        sub_node(M7, a->CHILD[1]);
+        add_node(M7_, src->CHILD[2]);
+
+        M5 = mul_node_right(M5, M5_);
+        del(M5_);
+
+        M6 = mul_node_right(M6, M6_);
+        del(M6_);
+
+        M7 = mul_node_right(M7, M7_);
+        del(M7_);
+
+        add_node(M6, M4);
+        add_node(M6, M5);
+        sub_node(M6, M2);
+
+        add_node(M2, M1);
+
+        add_node(M4, M3);
+
+        add_node(M5, M1);
+        sub_node(M5, M3);
+        sub_node(M5, M7);
+
+        del(M1);
+        del(M3);
+        del(M7);

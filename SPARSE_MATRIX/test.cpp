@@ -4,6 +4,7 @@
 #include "iostream"
 #include "QUADTREE.hpp"
 #include "cmath"
+#include "RANDOM.hpp"
 
 using namespace std;
 
@@ -30,79 +31,69 @@ class myClass {
 };
 
 int main(){
-    int T = 3;
 
-    SPARSE::MAT<float, 3> mata(T, T, true);
+    RandomGenerator T1_rnd(1, 100);
+    RandomGenerator T2_rnd(1, 100);
 
-    SPARSE::MAT<float, 3> matb(T, T, true);
-    matb = mata.transpose();
+    RandomGenerator ele_rnd(-100, 100);
 
+    int T1 = T1_rnd();
+    int T2 = T2_rnd();
 
-    matb = mata.setZero();
-    mata.setZero_();
+    SPARSE::MAT<float, 2> mata(T1, T2, true);
+    SPARSE::MAT<float, 2> matb(T2, T1, true);
+    SPARSE::MAT<float, 2> matc(T1, T1, true);
 
-    for (int i = 0; i < T; i++) {
-        mata.insert(i, i, i);
+    Eigen::MatrixXf mat_a(T1, T2);
+    Eigen::MatrixXf mat_b(T2, T1);
+    Eigen::MatrixXf mat_c(T1, T1);
+    
+
+    for (int i = 0; i < T1; i++) {
+        for (int j = 0; j < T2; j ++) {
+            int ele_a = ele_rnd();
+            mata.insert(ele_a, i, j);
+            mat_a(i, j) = ele_a;
+
+            int ele_b = ele_rnd();
+            matb.insert(ele_b, j, i);
+            mat_b(j, i) = ele_b;
+        }
     }
-    for (int j = 0; j < T; j++) {
-        matb.insert(j, T-j-1, j);
-    }
 
-    cout << "\n\n mata = " << endl;
-    mata.test();
+    // 一旦非0层节点中出现节点不满四个孩子节点（孩子节点中存在 nullptr）
+    // 乘法就会出错
 
-    cout << "\n\n matb = " << endl;
-    matb.test();
+    // matc = mata;
+    matc = mata*matb;
+    cout << "1" << endl;
+    mat_c = mat_a * mat_b;
 
-    matb = matb + mata;
-    mata = matb - mata;
+    // cout << "mata = " << endl;
+    // mata.test();
 
-    cout << "\n\n matb - mata + mata = matb = " << endl;
-    mata.test();
+    // cout << "matb = " << endl;
+    // matb.test();
 
-    cout << "matb + mata = " << endl;
-    matb.test();
+    // cout << "ans = " << endl;
+    // matc.test();
 
-    mata.neg_();
-
-    mata.setAutoFormat(true);
-
-    cout << "\n\n -matb = " << endl;
-    mata.test();
-
-    matb = -mata;
-
-    cout << "\n\n matb = " << endl;
-    matb.test();
-    // cout << endl;
-    /*
-    SPARSE::MAT<float, 3> vec(10, 1);
-    for (int i = 0; i < 10; i++) {
-        vec.insert(i, i, 0);
-    }
-    for (int i = 0; i < 10; i++) {
-        // cout << vec.getVal(i, 0) << endl;
-    }
     // cout << endl;
 
-    for (int i = 0; i < 10; i++) {
-        // cout << vec.transpose().getVal(0, i) << " ";
+    // cout << "ground truth = " << endl;
+    // cout << mat_c << endl;
+
+
+
+
+    for (int i = 0; i < T1; i++) {
+        for (int j = 0; j < T2; j++) {
+            if (mat_c(i, j) != matc.getVal(i, j)) {
+                cout << "wrong" << endl;
+                return 0;
+            }
+        }
     }
-    // cout << endl;
-    */
 
-    /*
-    matb = -matb;
-    matb.insert(0, 3, 2);
-    matb.test();
-
-    matb.insert(0, 4, 1);
-    matb.test();
-
-    matb.insert(0, 5, 0);
-    matb.test();
-    */
-
-    cout << mata.size().getVal(0, 0) << endl;
-    cout << mata.size().getVal(1, 0) << endl;
+    cout << "right" << endl;
 }

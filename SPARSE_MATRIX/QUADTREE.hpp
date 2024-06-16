@@ -414,6 +414,182 @@ namespace SPARSE{
             }
         }
 
+        // 节点复制
+        // 拷贝给定节点指针指向的节点和节点以下的所有子树
+        // a = src
+        // 必须是同深度的节点，但是内部函数不设判断以增加运行效率
+        void copy_node(
+            TREENODE<Eigen::Matrix<T, unit_size, unit_size>> * & a,
+            TREENODE<Eigen::Matrix<T, unit_size, unit_size>> * src
+        ) {
+            if (a == src) return;
+
+            if (src == nullptr) {
+                del(a);
+                return;
+            }
+
+            if (a == nullptr) {
+                a = new TREENODE<Eigen::Matrix<T, unit_size, unit_size>>(src->deepth);
+                *(a) = *(src);
+            }
+
+            std::queue<TREENODE<Eigen::Matrix<T, unit_size, unit_size>> *> q_ptr_this;
+            std::queue<TREENODE<Eigen::Matrix<T, unit_size, unit_size>> *> q_ptr_b;
+            
+            TREENODE<Eigen::Matrix<T, unit_size, unit_size>> * ptr_this;
+            TREENODE<Eigen::Matrix<T, unit_size, unit_size>> * ptr_b;
+            
+            q_ptr_this.push(a);
+            q_ptr_b.push(src);
+
+            while(!q_ptr_this.empty()) {
+                ptr_this = q_ptr_this.front();
+                ptr_b = q_ptr_b.front();
+
+                if (ptr_this->deepth == 0) {
+                    (*(ptr_this)) = (*(ptr_b));
+                } else {
+                    for (short i = 0; i < 4; i++){
+                        if (ptr_b->CHILD[i] != nullptr) {
+                            if (ptr_this->CHILD[i] == nullptr) {
+                                ptr_this->CHILD[i] = new TREENODE<Eigen::Matrix<T, unit_size, unit_size>>(
+                                        ptr_this->deepth - 1
+                                    );
+                            }
+                            q_ptr_this.push(ptr_this->CHILD[i]);
+                            q_ptr_b.push(ptr_b->CHILD[i]);
+                        } else {
+                            del(ptr_this->CHILD[i]);
+                        }
+                    }
+                }
+
+                q_ptr_this.pop();
+                q_ptr_b.pop();
+            }
+
+            return;
+        }
+
+        // 节点加和
+        // 加和给定节点指针所指向的节点以及节点下的子树
+        // a = a + src
+        // 必须是同深度的节点，但是内部函数不设判断以增加运行效率
+        void add_node(
+            TREENODE<Eigen::Matrix<T, unit_size, unit_size>> * & a,
+            TREENODE<Eigen::Matrix<T, unit_size, unit_size>> * src
+        ) {
+            if (src == nullptr) return;
+
+            if (a == nullptr) {
+                a = new TREENODE<Eigen::Matrix<T, unit_size, unit_size>>(src->deepth);
+            }
+
+            std::queue<TREENODE<Eigen::Matrix<T, unit_size, unit_size>> *> q_ptr_this;
+            std::queue<TREENODE<Eigen::Matrix<T, unit_size, unit_size>> *> q_ptr_b;
+            
+            TREENODE<Eigen::Matrix<T, unit_size, unit_size>> * ptr_this;
+            TREENODE<Eigen::Matrix<T, unit_size, unit_size>> * ptr_b;
+            
+            q_ptr_this.push(a);
+            q_ptr_b.push(src);
+            
+            while(!q_ptr_this.empty()) {
+
+                ptr_this = q_ptr_this.front();
+                ptr_b = q_ptr_b.front();
+
+                if (ptr_this->deepth == 0) {
+                    (*(ptr_this)).add_(*(ptr_b));
+                } else {
+                    for (short i = 0; i < 4; i++){
+                        if(ptr_b->CHILD[i] != nullptr) {
+                            if (ptr_this->CHILD[i] == nullptr) {
+                                ptr_this->CHILD[i] = new TREENODE<Eigen::Matrix<T, unit_size, unit_size>>(
+                                    ptr_this->deepth - 1
+                                );
+                            }
+                            q_ptr_this.push(ptr_this->CHILD[i]);
+                            q_ptr_b.push(ptr_b->CHILD[i]);
+                        }
+                    }
+                }
+
+                q_ptr_this.pop();
+                q_ptr_b.pop();
+            }
+            if (autoformat) format();
+        }
+
+        // 节点相减
+        // 给定节点指针所指向的节点以及节点下的子树，减去另一个给定节点指针所指向的节点以及节点下的子树
+        // a = a - src
+        // 必须是同深度的节点，但是内部函数不设判断以增加运行效率
+        void sub_node(
+            TREENODE<Eigen::Matrix<T, unit_size, unit_size>> * & a,
+            TREENODE<Eigen::Matrix<T, unit_size, unit_size>> * src
+        ) {
+            if (src == nullptr) return;
+
+            if (a == nullptr) {
+                a = new TREENODE<Eigen::Matrix<T, unit_size, unit_size>>(src->deepth);
+            }
+
+            std::queue<TREENODE<Eigen::Matrix<T, unit_size, unit_size>> *> q_ptr_this;
+            std::queue<TREENODE<Eigen::Matrix<T, unit_size, unit_size>> *> q_ptr_b;
+            
+            TREENODE<Eigen::Matrix<T, unit_size, unit_size>> * ptr_this;
+            TREENODE<Eigen::Matrix<T, unit_size, unit_size>> * ptr_b;
+            
+            q_ptr_this.push(a);
+            q_ptr_b.push(src);
+            
+            while(!q_ptr_this.empty()) {
+
+                ptr_this = q_ptr_this.front();
+                ptr_b = q_ptr_b.front();
+
+                if (ptr_this->deepth == 0) {
+                    (*(ptr_this)).sub_(*(ptr_b));
+                } else {
+                    for (short i = 0; i < 4; i++){
+                        if(ptr_b->CHILD[i] != nullptr) {
+                            if (ptr_this->CHILD[i] == nullptr) {
+                                ptr_this->CHILD[i] = new TREENODE<Eigen::Matrix<T, unit_size, unit_size>>(
+                                    ptr_this->deepth - 1
+                                );
+                            }
+                            q_ptr_this.push(ptr_this->CHILD[i]);
+                            q_ptr_b.push(ptr_b->CHILD[i]);
+                        }
+                    }
+                }
+
+                q_ptr_this.pop();
+                q_ptr_b.pop();
+            }
+            if (autoformat) format();
+        }
+
+        // 节点左乘
+        // 给定节点指针所指向的节点以及节点下的子树，左乘另一个给定节点指针所指向的节点以及节点下的子树
+        // a = src * a
+        // 必须是同深度的节点，但是内部函数不设判断以增加运行效率
+        void mul_node_left(
+            TREENODE<Eigen::Matrix<T, unit_size, unit_size>> * & a,
+            TREENODE<Eigen::Matrix<T, unit_size, unit_size>> * src
+        );
+
+        // 节点右乘
+        // 给定节点指针所指向的节点以及节点下的子树，右乘另一个给定节点指针所指向的节点以及节点下的子树
+        // a = a * src
+        // 必须是同深度的节点，但是内部函数不设判断以增加运行效率
+        void mul_node_right(
+            TREENODE<Eigen::Matrix<T, unit_size, unit_size>> * & a,
+            TREENODE<Eigen::Matrix<T, unit_size, unit_size>> * src
+        );
+        
         public:
         MAT(size_t rows = 1, size_t cols = 1, bool autoformat = true, long double prec = 1e-8);
         MAT<T, unit_size> & operator = (const MAT<T, unit_size> &b);
@@ -424,42 +600,8 @@ namespace SPARSE{
             return (this->ROOT == nullptr) ? true : false;
         }
 
-        /*
         bool insert(T data, size_t i, size_t j){
             check_idx_with_error(i, j);
-            // if (this->iszero_sca(data)) return true;
-            if (check_idx(i, j) != true) return false;
-            size_t I = IDX(i);
-            size_t J = IDX(j);
-            if(isBlank()){
-                this->ROOT = new TREENODE<Eigen::Matrix<T, unit_size, unit_size>>(this->quadtree_high()-1);
-                if (this->ROOT->deepth == 0) {
-                    this->initForData(ROOT);
-                }
-            }
-            TREENODE<Eigen::Matrix<T, unit_size, unit_size>> * ptr = ROOT;
-            while (ptr->deepth > 0) {
-                short k = 0;
-                if (I & (1<<(ptr->deepth-1))){
-                    k = k | 1;
-                }
-                if (J & (1<<(ptr->deepth-1))){
-                    k = k | 2;
-                }
-                if (ptr->CHILD[k] == nullptr){
-                    ptr->CHILD[k] = new TREENODE<Eigen::Matrix<T, unit_size, unit_size>>(ptr->deepth - 1);
-                }
-                ptr = ptr->CHILD[k];
-            }
-            this->initForData(ptr);
-            (*(ptr->dataNode))(IDX_(i), IDX_(j)) = data;
-            return true;
-        }
-        */
-
-       bool insert(T data, size_t i, size_t j){
-            check_idx_with_error(i, j);
-            // if (this->iszero_sca(data)) return true;
             if (check_idx(i, j) != true) return false;
             size_t I = IDX(i);
             size_t J = IDX(j);
@@ -561,15 +703,17 @@ namespace SPARSE{
         }
 
         void test() {
-            std::cout << std::endl;
             ROOT->test_print(ROOT);
-            // cout << endl;
+
+            Eigen::MatrixXf mat_out(this->rows, this->cols);
+
             for (size_t i = 0; i < this->rows; i++) {
                 for (size_t j = 0; j < this->cols; j++) {
-                    std::cout << getVal(i, j) << " ";
+                    mat_out(i, j) = getVal(i, j);
                 }
-                std::cout << std::endl;
             }
+
+            std::cout << mat_out << std::endl;
         }
 
         // 维度输出
@@ -617,7 +761,245 @@ namespace SPARSE{
         // 重载负号
         void neg_();
         MAT<T, unit_size> operator - () const;
+
+        // 矩阵乘法
+        void mul_right_(const MAT<T, unit_size> &b);
+        void mul_left_(const MAT<T, unit_size> &b);
+
+        MAT<T, unit_size> operator * (const MAT<T, unit_size> &b) const;
     };
+
+    template<class T, size_t unit_size>
+    void MAT<T, unit_size>::mul_node_left(
+            TREENODE<Eigen::Matrix<T, unit_size, unit_size>> * & a,
+            TREENODE<Eigen::Matrix<T, unit_size, unit_size>> * src
+    ) {
+        if (a == nullptr) {
+            return;
+        }
+
+        if (src == nullptr) {
+            del(a);
+            a = nullptr;
+            return;
+        }
+
+        if(a->deepth == 0) {
+            if (a->dataNode == nullptr) {
+                return;
+            }
+            if (src->dataNode == nullptr) {
+                del_single_node(a);
+                a = nullptr;
+                return;
+            }
+            (*(a->dataNode)) = (*(src->dataNode)) * (*(a->dataNode));
+            if (this->iszero_mat(*(a->dataNode))) {
+                del_single_node(a);
+                a = nullptr;
+            }
+            return;
+        }
+
+        TREENODE<Eigen::Matrix<T, unit_size, unit_size>> * M1
+            = new TREENODE<Eigen::Matrix<T, unit_size, unit_size>>(a->deepth - 1);
+        TREENODE<Eigen::Matrix<T, unit_size, unit_size>> * M2
+            = new TREENODE<Eigen::Matrix<T, unit_size, unit_size>>(a->deepth - 1);
+        TREENODE<Eigen::Matrix<T, unit_size, unit_size>> * M3
+            = new TREENODE<Eigen::Matrix<T, unit_size, unit_size>>(a->deepth - 1);
+        TREENODE<Eigen::Matrix<T, unit_size, unit_size>> * M4
+            = new TREENODE<Eigen::Matrix<T, unit_size, unit_size>>(a->deepth - 1);
+        TREENODE<Eigen::Matrix<T, unit_size, unit_size>> * M5
+            = new TREENODE<Eigen::Matrix<T, unit_size, unit_size>>(a->deepth - 1);
+        TREENODE<Eigen::Matrix<T, unit_size, unit_size>> * M5_
+            = new TREENODE<Eigen::Matrix<T, unit_size, unit_size>>(a->deepth - 1);
+        TREENODE<Eigen::Matrix<T, unit_size, unit_size>> * M6
+            = new TREENODE<Eigen::Matrix<T, unit_size, unit_size>>(a->deepth - 1);
+        TREENODE<Eigen::Matrix<T, unit_size, unit_size>> * M6_
+            = new TREENODE<Eigen::Matrix<T, unit_size, unit_size>>(a->deepth - 1);
+        TREENODE<Eigen::Matrix<T, unit_size, unit_size>> * M7
+            = new TREENODE<Eigen::Matrix<T, unit_size, unit_size>>(a->deepth - 1);
+        TREENODE<Eigen::Matrix<T, unit_size, unit_size>> * M7_
+            = new TREENODE<Eigen::Matrix<T, unit_size, unit_size>>(a->deepth - 1);
+        
+        copy_node(M1, a->CHILD[2]);
+        copy_node(M2, src->CHILD[0]);
+        copy_node(M3, src->CHILD[1]);
+        copy_node(M4, a->CHILD[1]);
+        copy_node(M5, src->CHILD[0]);
+        copy_node(M5_, a->CHILD[0]);
+        copy_node(M6, src->CHILD[2]);
+        copy_node(M6_, a->CHILD[1]);
+        copy_node(M7, src->CHILD[0]);
+        copy_node(M7_, a->CHILD[0]);
+
+        sub_node(M1, a->CHILD[3]);
+        mul_node_left(M1, src->CHILD[0]);
+
+        add_node(M2, src->CHILD[2]);
+        mul_node_right(M2, a->CHILD[3]);
+
+        add_node(M3, src->CHILD[3]);
+        mul_node_right(M3, a->CHILD[0]);
+
+        sub_node(M4, a->CHILD[0]);
+        mul_node_left(M4, src->CHILD[3]);
+
+        add_node(M5, src->CHILD[3]);
+        add_node(M5_, a->CHILD[3]);
+
+        sub_node(M6, src->CHILD[3]);
+        add_node(M6_, a->CHILD[3]);
+
+        sub_node(M7, src->CHILD[1]);
+        add_node(M7_, a->CHILD[2]);
+
+        mul_node_right(M5, M5_);
+        del(M5_);
+
+        mul_node_right(M6, M6_);
+        del(M6_);
+
+        mul_node_right(M7, M7_);
+        del(M7_);
+
+        add_node(M6, M4);
+        add_node(M6, M5);
+        sub_node(M6, M2);
+
+        add_node(M2, M1);
+
+        add_node(M4, M3);
+
+        add_node(M5, M1);
+        sub_node(M5, M3);
+        sub_node(M5, M7);
+
+        del(M1);
+        del(M3);
+        del(M7);
+
+        a->CHILD[0] = M6;
+        a->CHILD[1] = M4;
+        a->CHILD[2] = M2;
+        a->CHILD[3] = M5;
+    }
+
+    template<class T, size_t unit_size>
+    void MAT<T, unit_size>::mul_node_right(
+        TREENODE<Eigen::Matrix<T, unit_size, unit_size>> * & a,
+        TREENODE<Eigen::Matrix<T, unit_size, unit_size>> * src
+    ) {
+        if (a == nullptr) {
+            return;
+        }
+
+        if (src == nullptr) {
+            del(a);
+            a = nullptr;
+            return;
+        }
+
+        if(a->deepth == 0) {
+            if (a->dataNode == nullptr) {
+                return;
+            }
+            if (src->dataNode == nullptr) {
+                del_single_node(a);
+                a = nullptr;
+                return;
+            }
+            (*(a->dataNode)) = (*(a->dataNode)) * (*(src->dataNode));
+            if (this->iszero_mat(*(a->dataNode))) {
+                del_single_node(a);
+                a = nullptr;
+            }
+            return;
+        }
+
+        TREENODE<Eigen::Matrix<T, unit_size, unit_size>> * M1
+            = new TREENODE<Eigen::Matrix<T, unit_size, unit_size>>(a->deepth - 1);
+        TREENODE<Eigen::Matrix<T, unit_size, unit_size>> * M2
+            = new TREENODE<Eigen::Matrix<T, unit_size, unit_size>>(a->deepth - 1);
+        TREENODE<Eigen::Matrix<T, unit_size, unit_size>> * M3
+            = new TREENODE<Eigen::Matrix<T, unit_size, unit_size>>(a->deepth - 1);
+        TREENODE<Eigen::Matrix<T, unit_size, unit_size>> * M4
+            = new TREENODE<Eigen::Matrix<T, unit_size, unit_size>>(a->deepth - 1);
+        TREENODE<Eigen::Matrix<T, unit_size, unit_size>> * M5
+            = new TREENODE<Eigen::Matrix<T, unit_size, unit_size>>(a->deepth - 1);
+        TREENODE<Eigen::Matrix<T, unit_size, unit_size>> * M5_
+            = new TREENODE<Eigen::Matrix<T, unit_size, unit_size>>(a->deepth - 1);
+        TREENODE<Eigen::Matrix<T, unit_size, unit_size>> * M6
+            = new TREENODE<Eigen::Matrix<T, unit_size, unit_size>>(a->deepth - 1);
+        TREENODE<Eigen::Matrix<T, unit_size, unit_size>> * M6_
+            = new TREENODE<Eigen::Matrix<T, unit_size, unit_size>>(a->deepth - 1);
+        TREENODE<Eigen::Matrix<T, unit_size, unit_size>> * M7
+            = new TREENODE<Eigen::Matrix<T, unit_size, unit_size>>(a->deepth - 1);
+        TREENODE<Eigen::Matrix<T, unit_size, unit_size>> * M7_
+            = new TREENODE<Eigen::Matrix<T, unit_size, unit_size>>(a->deepth - 1);
+        
+        copy_node(M1, src->CHILD[2]);
+        copy_node(M2, a->CHILD[0]);
+        copy_node(M3, a->CHILD[1]);
+        copy_node(M4, src->CHILD[1]);
+        copy_node(M5, a->CHILD[0]);
+        copy_node(M5_, src->CHILD[0]);
+        copy_node(M6, a->CHILD[2]);
+        copy_node(M6_, src->CHILD[1]);
+        copy_node(M7, a->CHILD[0]);
+        copy_node(M7_, src->CHILD[0]);
+
+        sub_node(M1, src->CHILD[3]);
+        mul_node_left(M1, a->CHILD[0]);
+
+        add_node(M2, a->CHILD[2]);
+        mul_node_right(M2, src->CHILD[3]);
+
+        add_node(M3, a->CHILD[3]);
+        mul_node_right(M3, src->CHILD[0]);
+
+        sub_node(M4, src->CHILD[0]);
+        mul_node_left(M4, a->CHILD[3]);
+
+        add_node(M5, a->CHILD[3]);
+        add_node(M5_, src->CHILD[3]);
+
+        sub_node(M6, a->CHILD[3]);
+        add_node(M6_, src->CHILD[3]);
+
+        sub_node(M7, a->CHILD[1]);
+        add_node(M7_, src->CHILD[2]);
+
+        mul_node_right(M5, M5_);
+        del(M5_);
+
+        mul_node_right(M6, M6_);
+        del(M6_);
+
+        mul_node_right(M7, M7_);
+        del(M7_);
+
+        add_node(M6, M4);
+        add_node(M6, M5);
+        sub_node(M6, M2);
+
+        add_node(M2, M1);
+
+        add_node(M4, M3);
+
+        add_node(M5, M1);
+        sub_node(M5, M3);
+        sub_node(M5, M7);
+
+        del(M1);
+        del(M3);
+        del(M7);
+
+        a->CHILD[0] = M6;
+        a->CHILD[1] = M4;
+        a->CHILD[2] = M2;
+        a->CHILD[3] = M5;
+    }
 
     template<class T, size_t unit_size>
     MAT<T, unit_size>::MAT(size_t rows, size_t cols, bool autoformat, long double prec) : 
@@ -815,7 +1197,7 @@ namespace SPARSE{
         if (b.isBlank()) return;
 
         if (this->isBlank()) {
-            this->ROOT = new TREENODE<Eigen::Matrix<T, unit_size, unit_size>>(*(b.ROOT));
+            this->ROOT = new TREENODE<Eigen::Matrix<T, unit_size, unit_size>>(b.ROOT->deepth);
         }
 
         std::queue<TREENODE<Eigen::Matrix<T, unit_size, unit_size>> *> q_ptr_this;
@@ -873,7 +1255,6 @@ namespace SPARSE{
 
         if (this->isBlank()) {
             this->ROOT = new TREENODE<Eigen::Matrix<T, unit_size, unit_size>>(b.ROOT->deepth);
-            *(this->ROOT) = -*(b.ROOT);
         }
 
         std::queue<TREENODE<Eigen::Matrix<T, unit_size, unit_size>> *> q_ptr_this;
@@ -949,6 +1330,37 @@ namespace SPARSE{
     MAT<T, unit_size> MAT<T, unit_size>::operator- () const {
         MAT<T, unit_size> ans = *this;
         ans.neg_();
+        return ans;
+    }
+
+    template<class T, size_t unit_size>
+    void MAT<T, unit_size>::mul_left_(const MAT<T, unit_size> &b) {
+        if (b.cols == this->rows) {
+            this->rows = b.rows;
+        } else {
+            IndexOutOfRangeException("Wrong size!");
+            return;
+        }
+
+        mul_node_left(this->ROOT, b.ROOT);
+    }
+
+    template<class T, size_t unit_size>
+    void MAT<T, unit_size>::mul_right_(const MAT<T, unit_size> &b) {
+        if (this->cols == b.rows) {
+            this->cols = b.cols;
+        } else {
+            IndexOutOfRangeException("Wrong size!");
+            return;
+        }
+
+        mul_node_right(this->ROOT, b.ROOT);
+    }
+
+    template<class T, size_t unit_size>
+    MAT<T, unit_size> MAT<T, unit_size>::operator * (const MAT<T, unit_size> &b) const {
+        MAT<T, unit_size> ans = *this;
+        ans.mul_right_(b);
         return ans;
     }
 }
