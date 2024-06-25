@@ -89,6 +89,8 @@
         "variant": "cpp",
         "queue": "cpp",
         "tmp_file": "c",
-        "core": "c"
+        "core": "c",
+        "dense": "cpp",
+        "__nullptr": "cpp"
     }
 }

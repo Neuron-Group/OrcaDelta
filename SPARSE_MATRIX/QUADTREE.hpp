@@ -2,6 +2,8 @@
 #ifndef __QUADTREE_HPP__
 #define __QUADTREE_HPP__
 
+#pragma GCC optimize (3, "Ofast", "inline")
+
 #include "iostream"
 #include "cstdio"
 #include "algorithm"
@@ -162,10 +164,10 @@ namespace SPARSE{
 
         TREENODE * get(size_t i, size_t j){
             TREENODE * ptr = this;
-            if(ptr == nullptr){
-                return ptr;
+            if (ptr == nullptr){
+                return nullptr;
             }
-            while (ptr->deepth > 0) {
+            while (ptr != nullptr && ptr->deepth > 0) {
                 short k = 0;
                 if (i & (1<<(ptr->deepth-1))){
                     k = k | 1;
@@ -177,6 +179,10 @@ namespace SPARSE{
                     return nullptr;
                 }
                 ptr = ptr->CHILD[k];
+                
+                if (ptr == nullptr) {
+                    return nullptr;
+                }
             }
             return ptr;
         }
@@ -337,19 +343,19 @@ namespace SPARSE{
             return std::ceil(log2(quadtree_size()))+1;
         }
 
-        size_t IDX(size_t idx) {
+        size_t IDX(size_t idx) const {
             return idx/unit_size;
         }
         
-        size_t IDX_(size_t idx) {
+        size_t IDX_(size_t idx) const {
             return idx%unit_size;
         }
 
-        bool check_idx(const size_t i, const size_t j){
+        bool check_idx(const size_t i, const size_t j) const {
             return (i < this->rows && j < this->cols) ? true : false;
         }
 
-        void check_idx_with_error(size_t i, size_t j) {
+        void check_idx_with_error(size_t i, size_t j) const {
             if (check_idx(i, j)) return;
             throw IndexOutOfRangeException("Index out of range.");
         }
@@ -387,10 +393,19 @@ namespace SPARSE{
         }
 
         // 删除 0 元素及其分支
-        short removezero(TREENODE<Eigen::Matrix<T, unit_size, unit_size>> * & root) {
+        short removezero(TREENODE<Eigen::Matrix<T, unit_size, unit_size>> * & root, size_t I = 0, size_t J = 0) {
             if (root == nullptr) {
                 return 0;
             }
+
+            // 起始地址检查
+            
+            if (I*unit_size >= this->rows || J*unit_size >= this->cols) {
+                del(root);
+                root = nullptr;
+                return 0;
+            }
+            
 
             if (root->deepth == 0) {
                 if (root->dataNode == nullptr) {
@@ -409,7 +424,11 @@ namespace SPARSE{
             short flag = 0;
 
             for (short i = 0; i < 4; i++) {
-                flag += removezero(root->CHILD[i]);
+                flag += removezero(
+                    root->CHILD[i], 
+                    I + (i & 1)*(1<<(root->deepth - 1)), 
+                    J + ((i & 2)>>1)*(1<<(root->deepth - 1))
+                );
             }
 
             if (flag == 0) {
@@ -692,7 +711,7 @@ namespace SPARSE{
             return true;
         }
 
-        T getVal(size_t i, size_t j) {
+        T getVal(size_t i, size_t j) const {
             check_idx_with_error(i, j);
             // 索引到块
             TREENODE<Eigen::Matrix<T, unit_size, unit_size>> * ptr = this->ROOT->get(IDX(i), IDX(j));
@@ -705,10 +724,18 @@ namespace SPARSE{
 
         // 格式化
         void format() {
+            // std::cout << "front" << std::endl;
+            // test();
             this->removezero(this->ROOT);
+            // std::cout << "after" << std::endl;
+            // test();
         }
 
         void test() {
+            T a;
+            std::cout << "SPARSE::MAT<" << typeid(a).name() << ", " << unit_size << ">" << std::endl;
+            std::cout << "rows : " << this->rows << std::endl;
+            std::cout << "cols : " << this->cols << std::endl;
             ROOT->test_print(ROOT);
 
             Eigen::MatrixXf mat_out(this->rows, this->cols);
@@ -1457,18 +1484,23 @@ namespace SPARSE{
 
     template<class T, size_t unit_size>
     void MAT<T, unit_size>::mul_left_(const MAT<T, unit_size> &b) {
+        bool tmp = this->autoformat;
+        this->autoformat = false;
         if (b.cols == this->rows) {
             this->rows = b.rows;
         } else {
             IndexOutOfRangeException("Wrong size!");
             return;
         }
-
         mul_node_left(this->ROOT, b.ROOT);
+        this->autoformat = tmp;
+        if(this->autoformat) format();
     }
 
     template<class T, size_t unit_size>
     void MAT<T, unit_size>::mul_right_(const MAT<T, unit_size> &b) {
+        bool tmp = this->autoformat;
+        this->autoformat = false;
         if (this->cols == b.rows) {
             this->cols = b.cols;
         } else {
@@ -1477,6 +1509,8 @@ namespace SPARSE{
         }
 
         mul_node_right(this->ROOT, b.ROOT);
+        this->autoformat = tmp;
+        if(this->autoformat) format();
     }
 
     template<class T, size_t unit_size>
@@ -1966,6 +2000,20 @@ namespace SPARSE{
 
     template<class T, size_t unit_size>
     MAT<T, unit_size> MAT<T, unit_size>::operator / (const MAT<T, unit_size> &b) const {
+        if (b.rows == b.cols && b.cols == 1) {
+            if (this->rows == this->cols && this->cols == 1) {
+                MAT<T, unit_size> ans;
+                T b_sca = b.getVal(0, 0);
+                if (iszero_sca(b_sca)) {
+                    throw ArithmeticException("Divide zero!");
+                } else {
+                    ans.insert(this->getVal(0, 0)/b_sca, 0, 0);
+                    return ans;
+                }
+            } else {
+                IndexOutOfRangeException("Wrong size!");
+            }
+        }
         return this->divWithEle(b);
     }
 

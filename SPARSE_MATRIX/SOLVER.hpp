@@ -2,6 +2,8 @@
 #ifndef __SOLVER_HPP__
 #define __SOLVER_HPP__
 
+#pragma GCC optimize (3, "Ofast", "inline")
+
 #include "QUADTREE.hpp"
 
 template<class T, size_t unit_size>
@@ -19,7 +21,7 @@ bool Gongetidu(
     SPARSE::MAT<T, unit_size> d = r;
     SPARSE::MAT<T, unit_size> alpha, bt;
     SPARSE::MAT<T, unit_size> r1 = r;
-    size_t i = 1;
+    size_t i = 0;
 
     for (size_t it = 0; it < maxIt; it++) {
         alpha = ((r.transpose())*d)/((d.transpose())*A*d);
